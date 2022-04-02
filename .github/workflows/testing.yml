@@ -38,6 +38,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y webkit2gtk-4.0
+      - name: build tauri app
+        run: yarn tauri:build
 
       # Runs a single command using the runners shell
       - name: Run a one-line script
