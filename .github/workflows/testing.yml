@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - main
-
 jobs:
   publish-tauri:
     strategy:
@@ -13,28 +12,54 @@ jobs:
 
     runs-on: ${{ matrix.platform }}
     steps:
-    - uses: actions/checkout@v2
-    - name: setup node
-      uses: actions/setup-node@v1
-      with:
-        node-version: 16
-    - name: install Rust stable
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-    - name: install dependencies (ubuntu onlys)
-      if: matrix.platform == 'ubuntu-latest'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libgtk-3-dev webkit2gtk-4.0 libappindicator3-dev librsvg2-dev patchelf
-    - name: install app dependencies and build it
-      run: npm run tauri:build
-    - uses: tauri-apps/tauri-action@v0
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tagName: orange-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version
-        releaseName: "__VERSION__"
-        releaseBody: "See the assets to download this version and install."
-        releaseDraft: true
-        prerelease: false
+      - uses: actions/checkout@v2
+      - name: setup node
+        uses: actions/setup-node@v1
+        with:
+          node-version: 12
+      - name: install rust stable
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+      - name: install webkit2gtk (ubuntu only)
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y webkit2gtk-4.0
+      - run: yarn
+      - name: build nota for tauri app
+        run: yarn build
+      - run: cargo install tauri-bundler --force
+      - name: build tauri app
+        run: yarn tauri:build
+      - name: compress (macos only)
+        if: matrix.platform == 'macos-latest'
+        working-directory: ${{ format('./src-tauri/target/release/{0}', matrix.buildFolder ) }}
+        run: tar -czf ${{ format('nota{0}{1}', matrix.ext, matrix.compressed ) }} ${{ format('nota{0}', matrix.ext ) }}
+      - name: upload release asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.RELEASE_UPLOAD_URL }}
+          asset_path: ${{ format('./src-tauri/target/release/{0}/nota{1}{2}', matrix.buildFolder, matrix.ext, matrix.compressed ) }}
+          asset_name: ${{ format('nota{0}{1}', matrix.ext, matrix.compressed ) }}
+          asset_content_type: application/zip
+      - name: build tauri app in debug mode
+        run: yarn tauri:build --debug
+      - name: compress (macos only)
+        if: matrix.platform == 'macos-latest'
+        working-directory: ${{ format('./src-tauri/target/debug/{0}', matrix.buildFolder ) }}
+        run: tar -czf ${{ format('nota{0}{1}', matrix.ext, matrix.compressed ) }} ${{ format('nota{0}', matrix.ext ) }}
+      - name: upload release asset with debug mode on
+        id: upload-release-asset-debug-mode
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.RELEASE_UPLOAD_URL }}
+          asset_path: ${{ format('./src-tauri/target/debug/{0}/nota{1}{2}', matrix.buildFolder, matrix.ext, matrix.compressed ) }}
+          asset_name: ${{ format('nota-debug{0}{1}', matrix.ext, matrix.compressed ) }}
+          asset_content_type: application/zip
