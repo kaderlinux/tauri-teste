@@ -29,6 +29,15 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: 12
+      - name: install rust stable
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+      - name: install webkit2gtk
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y webkit2gtk-4.0
 
       # Runs a single command using the runners shell
       - name: Run a one-line script
