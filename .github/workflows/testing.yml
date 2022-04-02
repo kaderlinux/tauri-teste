@@ -29,8 +29,8 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: 12
-      - name: install cli-service
-        run:  npm install -g @vue/cli-service
+      - name: install vue/cli
+        run:  npm install -g @vue/cli
       - name: install rust stable
         uses: actions-rs/toolchain@v1
         with:
